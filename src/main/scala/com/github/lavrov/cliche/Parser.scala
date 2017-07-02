@@ -4,8 +4,10 @@ import shapeless._, ops.hlist.IsHCons
 import shapeless.labelled.{FieldType, field}
 
 trait Parser[A] {
-  def parse(args: CommandLineArgs): Either[String, A]
+  def parse(args: CommandLineArgs): Either[String, ParserResult[A]]
 }
+
+case class ParserResult[A](value: A, unparsed: CommandLineArgs = CommandLineArgs(Nil))
 
 object Parser {
 
@@ -20,7 +22,7 @@ object Parser {
 
     implicit def hNilParser[Defaults <: HList, Recurses <: HList]: ParserFactory[HNil, Defaults, Recurses] =
       (_, _) => {
-        case CommandLineArgs(Nil) => Right(HNil)
+        case CommandLineArgs(Nil) => Right(ParserResult(HNil))
         case _ => Left("There are not parsed args")
       }
 
@@ -42,12 +44,12 @@ object Parser {
               defaultValue.toRight(s"Missing argument ${fieldName.value.name}")
             else
               multiArgParser.parse(matchedArgs)
-          for {
-            value <- eitherValue
-            tailResult <- tailFactory.create(defaultForField tail defaults, recurseForField tail recurse).parse(restArgs)
+          eitherValue.flatMap { value =>
+             tailFactory.create(defaultForField tail defaults, recurseForField tail recurse).parse(restArgs).map {
+               case ParserResult(tailResult, unparsed) =>
+                 ParserResult(field[K](value) :: tailResult, unparsed)
+             }
           }
-            yield
-              field[K](value) :: tailResult
       }
   }
 
@@ -60,12 +62,13 @@ object Parser {
   ): ParserFactory[FieldType[K, H] :: T, Defaults, Recurses] = {
     (defaults, recurse) =>
       args =>
-        for {
-          value <- parser.parse(args)
-          tailResult <- tailFactory.create(defaultForField tail defaults, recurseForField tail recurse).parse(args)
-        }
-          yield
-            field[K](value) :: tailResult
+       parser.parse(args).flatMap {
+         case ParserResult(value, unparsed) =>
+           tailFactory.create(defaultForField tail defaults, recurseForField tail recurse).parse(unparsed).map {
+             case ParserResult(tailResult, unparsedTail) =>
+               ParserResult(field[K](value) :: tailResult, unparsedTail)
+           }
+       }
     }
 
   implicit def genericParser[A, Rep <: HList, K <: HList, Defaults <: HList, Recurses <: HList](
@@ -76,6 +79,9 @@ object Parser {
       parserFactory: ParserFactory[Rep, Defaults, Recurses]
   ): Parser[A] = {
     args =>
-      parserFactory.create(defaults(), recurses()).parse(args).map(generic.from)
+      parserFactory.create(defaults(), recurses()).parse(args).map {
+        case  ParserResult(genRep, unparsed) =>
+          ParserResult(generic from genRep, unparsed)
+      }
   }
 }
