@@ -49,25 +49,25 @@ object Parser {
              }
           }
       }
-  }
 
-  implicit def hConsRecursiveParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
-      implicit
-      defaultForField: IsHCons.Aux[Defaults, Option[H], DT],
-      recurseForField: IsHCons.Aux[Recurses, Some[Recurse], RT],
-      parser: Parser[H],
-      tailFactory: ParserFactory[T, DT, RT]
-  ): ParserFactory[FieldType[K, H] :: T, Defaults, Recurses] = {
-    (defaults, recurse) =>
-      args =>
-       parser.parse(args).flatMap {
-         case ParserResult(value, unparsed) =>
-           tailFactory.create(defaultForField tail defaults, recurseForField tail recurse).parse(unparsed).map {
-             case ParserResult(tailResult, unparsedTail) =>
-               ParserResult(field[K](value) :: tailResult, unparsedTail)
-           }
-       }
+    implicit def hConsRecursiveParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
+        implicit
+        defaultForField: IsHCons.Aux[Defaults, Option[H], DT],
+        recurseForField: IsHCons.Aux[Recurses, Some[Recurse], RT],
+        parser: Parser[H],
+        tailFactory: ParserFactory[T, DT, RT]
+    ): ParserFactory[FieldType[K, H] :: T, Defaults, Recurses] = {
+      (defaults, recurse) =>
+        args =>
+          parser.parse(args).flatMap {
+            case ParserResult(value, unparsed) =>
+              tailFactory.create(defaultForField tail defaults, recurseForField tail recurse).parse(unparsed).map {
+                case ParserResult(tailResult, unparsedTail) =>
+                  ParserResult(field[K](value) :: tailResult, unparsedTail)
+              }
+          }
     }
+  }
 
   implicit def genericParser[A, Rep <: HList, K <: HList, Defaults <: HList, Recurses <: HList](
       implicit
