@@ -4,10 +4,10 @@ import shapeless._, ops.hlist.IsHCons
 import shapeless.labelled.{FieldType, field}
 
 trait Parser[A] {
-  def parse(args: CommandLineArgs): Either[String, ParserResult[A]]
+  def parse(args: CommandLineArgs): Either[String, ParsedArgs[A]]
 }
 
-case class ParserResult[A](value: A, unparsed: CommandLineArgs = CommandLineArgs(Nil))
+case class ParsedArgs[A](value: A, unparsed: CommandLineArgs = CommandLineArgs(Nil))
 
 object Parser {
 
@@ -22,7 +22,7 @@ object Parser {
 
     implicit def hNilParser[Defaults <: HList, Recurses <: HList]: ParserFactory[HNil, Defaults, Recurses] =
       (_, _) =>
-        args => Right(ParserResult(HNil, args))
+        args => Right(ParsedArgs(HNil, args))
 
     implicit def hConsParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
         implicit
@@ -46,8 +46,8 @@ object Parser {
               multiArgParser.parse(matchedArgs)
           eitherValue.flatMap { value =>
              tailFactory.create(defaultForField tail defaults, recurseForField tail recurse).parse(restArgs).map {
-               case ParserResult(tailResult, unparsed) =>
-                 ParserResult(field[K](value) :: tailResult, unparsed)
+               case ParsedArgs(tailResult, unparsed) =>
+                 ParsedArgs(field[K](value) :: tailResult, unparsed)
              }
           }
       }
@@ -62,10 +62,10 @@ object Parser {
       (defaults, recurse) =>
         args =>
           parser.parse(args).flatMap {
-            case ParserResult(value, unparsed) =>
+            case ParsedArgs(value, unparsed) =>
               tailFactory.create(defaultForField tail defaults, recurseForField tail recurse).parse(unparsed).map {
-                case ParserResult(tailResult, unparsedTail) =>
-                  ParserResult(field[K](value) :: tailResult, unparsedTail)
+                case ParsedArgs(tailResult, unparsedTail) =>
+                  ParsedArgs(field[K](value) :: tailResult, unparsedTail)
               }
           }
     }
@@ -82,8 +82,8 @@ object Parser {
   ): Parser[A] = {
     args =>
       parserFactory.create(defaults(), recurses()).parse(args).map {
-        case  ParserResult(genRep, unparsed) =>
-          ParserResult(generic from genRep, unparsed)
+        case  ParsedArgs(genRep, unparsed) =>
+          ParsedArgs(generic from genRep, unparsed)
       }
   }
 }

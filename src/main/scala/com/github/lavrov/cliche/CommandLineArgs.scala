@@ -1,9 +1,9 @@
 package com.github.lavrov.cliche
 
-case class CommandLineArgs(args: List[Arg]) {
+case class CommandLineArgs(raw: List[Arg]) {
   def argsByKey(keys: Set[String]) = {
     val (matched, rest) =
-      args.partition {
+      raw.partition {
         case KeyedArg(key, _) if keys contains key => true
         case _ => false
       }
