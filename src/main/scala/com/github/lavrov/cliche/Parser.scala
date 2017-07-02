@@ -1,7 +1,10 @@
 package com.github.lavrov.cliche
 
-import shapeless._, ops.hlist.IsHCons
+import shapeless._
+import ops.hlist.IsHCons
 import shapeless.labelled.{FieldType, field}
+
+import scala.reflect.ClassTag
 
 trait Parser[A] {
   def parse(args: CommandLineArgs): Either[String, ParsedArgs[A]]
@@ -84,6 +87,40 @@ object Parser {
       parserFactory.create(defaults(), recurses()).parse(args).map {
         case  ParsedArgs(genRep, unparsed) =>
           ParsedArgs(generic from genRep, unparsed)
+      }
+  }
+
+  implicit val cNilParser: Parser[CNil] = _ => Left("Command not found")
+
+  implicit def coproductParser[H, T <: Coproduct](
+      implicit
+      hParser: Parser[H],
+      tParser: Parser[T],
+      classTag: ClassTag[H]
+  ): Parser[H :+: T] = {
+    case args@CommandLineArgs(scala.::(PositionedArg(commandName), rest)) =>
+      if (commandName == classTag.runtimeClass.getSimpleName)
+        hParser.parse(CommandLineArgs(rest)).map {
+          case ParsedArgs(value, unparsed) =>
+            ParsedArgs(Inl(value), unparsed)
+        }
+      else
+        tParser.parse(args).map {
+          case ParsedArgs(value, unparsed) =>
+            ParsedArgs(Inr(value), unparsed)
+        }
+    case _ => Left("There must be a command name first")
+  }
+
+  implicit def genericCoproductParser[A, Rep <: Coproduct](
+      implicit
+      generic: Generic.Aux[A, Rep],
+      parser: Parser[Rep]
+  ): Parser[A] = {
+    args =>
+      parser.parse(args).map {
+        case ParsedArgs(value, unparsed) =>
+          ParsedArgs(generic from value, unparsed)
       }
   }
 }
