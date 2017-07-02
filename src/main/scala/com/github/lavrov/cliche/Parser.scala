@@ -24,7 +24,7 @@ object Parser {
       (_, _) =>
         args => Right(ParsedArgs(HNil, args))
 
-    implicit def hConsParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
+    implicit def hListParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
         implicit
         fieldNameWitness: Witness.Aux[K],
         defaultForField: IsHCons.Aux[Defaults, Option[H], DT],
@@ -52,7 +52,7 @@ object Parser {
           }
       }
 
-    implicit def hConsRecursiveParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
+    implicit def hListRecursiveParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
         implicit
         defaultForField: IsHCons.Aux[Defaults, Option[H], DT],
         recurseForField: IsHCons.Aux[Recurses, Some[Recurse], RT],
