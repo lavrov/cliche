@@ -2,9 +2,6 @@ package com.github.lavrov.cliche
 
 import shapeless._
 import shapeless.labelled.{FieldType, field}
-import shapeless.ops.record.{Keys, Selector}
-import shapeless.ops.hlist.ZipWithKeys
-import shapeless.record.recordOps
 
 trait Parser[A] {
   def parse(args: CommandLineArgs): Either[String, A]
@@ -27,25 +24,25 @@ object Parser {
         case _ => Left("There are not parsed args")
       }
 
-    implicit def hConsParser[K <: Symbol, H, T <: HList, Defaults <: HList](
+    implicit def hConsParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList](
         implicit
         fieldName: Witness.Aux[K],
-        defaultForField: Selector.Aux[Defaults, K, Option[H]],
+        defaultForField: shapeless.ops.hlist.IsHCons.Aux[Defaults, Option[H], DT],
         defaultForType: Option[TypeDefault[H]] = None,
         multiArgParser: MultiArgParser[H],
-        tailFactory: ParserFactory[T, Defaults]
+        tailFactory: ParserFactory[T, DT]
     ): ParserFactory[FieldType[K, H] :: T, Defaults] =
       defaults => {
         args =>
           val (matchedArgs, restArgs) = args.argsByKey(Set(fieldName.value.name))
-          val defaultValue = defaultForField(defaults) orElse defaultForType.map(_.value)
+          val defaultValue = defaultForField.head(defaults) orElse defaultForType.map(_.value)
           val eitherValue =
             if (matchedArgs.isEmpty)
               defaultValue.toRight(s"Missing argument ${fieldName.value.name}")
             else
               multiArgParser.parse(matchedArgs)
           for {
-            tailResult <- tailFactory.create(defaults).parse(restArgs)
+            tailResult <- tailFactory.create(defaultForField tail defaults).parse(restArgs)
             value <- eitherValue
           }
             yield
@@ -53,15 +50,13 @@ object Parser {
       }
   }
 
-  implicit def genericParser[A, Rep <: HList, K <: HList, DefaultsOption <: HList, Defaults <: HList, Zipped <: HList, P](
+  implicit def genericParser[A, Rep <: HList, K <: HList, Defaults <: HList](
       implicit
       generic: LabelledGeneric.Aux[A, Rep],
-      keys: Keys.Aux[Rep, K],
-      defaultsAsOption: Default.AsOptions.Aux[A, DefaultsOption],
-      toRecord: ZipWithKeys.Aux[K, DefaultsOption, Defaults],
+      defaults: Default.AsOptions.Aux[A, Defaults],
       parserFactory: ParserFactory[Rep, Defaults]
   ): Parser[A] = {
     args =>
-      parserFactory.create(toRecord(defaultsAsOption())).parse(args).map(generic.from)
+      parserFactory.create(defaults()).parse(args).map(generic.from)
   }
 }
