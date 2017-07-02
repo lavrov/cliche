@@ -26,7 +26,7 @@ object Parser {
 
     implicit def hConsParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
         implicit
-        fieldName: Witness.Aux[K],
+        fieldNameWitness: Witness.Aux[K],
         defaultForField: IsHCons.Aux[Defaults, Option[H], DT],
         defaultForType: Option[TypeDefault[H]] = None,
         recurseForField: IsHCons.Aux[Recurses, None.type, RT],
@@ -35,11 +35,13 @@ object Parser {
     ): ParserFactory[FieldType[K, H] :: T, Defaults, Recurses] = {
       (defaults, recurse) =>
         args =>
-          val (matchedArgs, restArgs) = args.argsByKey(Set(fieldName.value.name))
+          val fieldName = fieldNameWitness.value.name
+          val argKeys = Set(fieldName, camelcaseToDashSeparated(fieldName))
+          val (matchedArgs, restArgs) = args.argsByKey(argKeys)
           val defaultValue = defaultForField.head(defaults) orElse defaultForType.map(_.value)
           val eitherValue =
             if (matchedArgs.isEmpty)
-              defaultValue.toRight(s"Missing argument ${fieldName.value.name}")
+              defaultValue.toRight(s"Missing argument $fieldName")
             else
               multiArgParser.parse(matchedArgs)
           eitherValue.flatMap { value =>
@@ -67,6 +69,8 @@ object Parser {
               }
           }
     }
+
+    def camelcaseToDashSeparated(in: String): String = """[A-Z]""".r.replaceAllIn(in, m => s"-${m.matched.toLowerCase}")
   }
 
   implicit def genericParser[A, Rep <: HList, K <: HList, Defaults <: HList, Recurses <: HList](

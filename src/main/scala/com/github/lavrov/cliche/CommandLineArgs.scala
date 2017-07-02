@@ -14,7 +14,7 @@ case class CommandLineArgs(args: List[Arg]) {
 object CommandLineArgs {
 
   val SingleDash = """-([a-zA-Z])""".r
-  val DoubleDash = """--([a-zA-Z]{2,})""".r
+  val DoubleDash = """--([a-zA-Z][a-zA-Z\-]+)""".r
 
   def from(args: Array[String]): CommandLineArgs = {
     def loop(index: Int): List[Arg] = {
