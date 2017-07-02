@@ -20,7 +20,7 @@ object Parser {
 
   object ParserFactory {
 
-    implicit def hNilParser[Defaults <: HList, Recurses <: HList]: ParserFactory[HNil, Defaults, Recurses] =
+    implicit val hNilParser: ParserFactory[HNil, HNil, HNil] =
       (_, _) =>
         args => Right(ParsedArgs(HNil, args))
 
