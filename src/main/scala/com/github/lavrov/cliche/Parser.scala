@@ -21,10 +21,8 @@ object Parser {
   object ParserFactory {
 
     implicit def hNilParser[Defaults <: HList, Recurses <: HList]: ParserFactory[HNil, Defaults, Recurses] =
-      (_, _) => {
-        case CommandLineArgs(Nil) => Right(ParserResult(HNil))
-        case _ => Left("There are not parsed args")
-      }
+      (_, _) =>
+        args => Right(ParserResult(HNil, args))
 
     implicit def hConsParser[K <: Symbol, H, T <: HList, DH, Defaults <: HList, DT <: HList, Recurses <: HList, RT <: HList](
         implicit
