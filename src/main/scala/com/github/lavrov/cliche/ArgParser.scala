@@ -9,7 +9,7 @@ object ArgParser {
   implicit val stringParser: ArgParser[String] = Right(_)
 
   implicit val boolParser: ArgParser[Boolean] = {
-    case "true" => Right(true)
+    case "" | "true" => Right(true)
     case "false" => Right(false)
     case _ => Left("not a boolean")
   }

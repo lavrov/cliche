@@ -5,7 +5,7 @@ case class Copy(@Recurse parameters: Parameters, from: String, to: List[String])
 
 sealed trait Command
 
-case class Start() extends Command
+case class StartProcess(delay: Int) extends Command
 
 case class Stop() extends Command
 
