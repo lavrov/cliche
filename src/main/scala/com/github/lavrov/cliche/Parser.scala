@@ -1,6 +1,6 @@
 package com.github.lavrov.cliche
 
-import shapeless._
+import shapeless.{:: => #:, _}
 import ops.hlist.IsHCons
 import shapeless.labelled.{FieldType, field}
 
@@ -35,7 +35,7 @@ object Parser {
         recurseForField: IsHCons.Aux[Recurses, None.type, RT],
         multiArgParser: MultiArgParser[H],
         tailFactory: ParserFactory[T, DT, RT]
-    ): ParserFactory[FieldType[K, H] :: T, Defaults, Recurses] = {
+    ): ParserFactory[FieldType[K, H] #: T, Defaults, Recurses] = {
       (defaults, recurse) =>
         args =>
           val fieldName = fieldNameWitness.value.name
@@ -61,7 +61,7 @@ object Parser {
         recurseForField: IsHCons.Aux[Recurses, Some[Recurse], RT],
         parser: Parser[H],
         tailFactory: ParserFactory[T, DT, RT]
-    ): ParserFactory[FieldType[K, H] :: T, Defaults, Recurses] = {
+    ): ParserFactory[FieldType[K, H] #: T, Defaults, Recurses] = {
       (defaults, recurse) =>
         args =>
           parser.parse(args).flatMap {
@@ -98,7 +98,7 @@ object Parser {
       tParser: Parser[T],
       classTag: ClassTag[H]
   ): Parser[H :+: T] = {
-    case args@CommandLineArgs(scala.::(PositionedArg(commandName), rest)) =>
+    case args@CommandLineArgs(PositionedArg(commandName) :: rest) =>
       if (commandName == classTag.runtimeClass.getSimpleName)
         hParser.parse(CommandLineArgs(rest)).map {
           case ParsedArgs(value, unparsed) =>
