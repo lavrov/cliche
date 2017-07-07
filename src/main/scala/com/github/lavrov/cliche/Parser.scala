@@ -134,7 +134,7 @@ object ParserAndHelp {
             }
         case _ => Left("There must be a command name first")
       },
-      Help(commandKey :: hParser.help.lines ::: tParser.help.lines)
+      Help(commandKey :: hParser.help.lines.map("  " + _) ::: tParser.help.lines)
     )
   }
 
@@ -149,6 +149,6 @@ object ParserAndHelp {
           case ParsedArgs(value, unparsed) =>
             ParsedArgs(generic from value, unparsed)
         },
-      Help("Supported commands: " :: parser.help.lines)
+      Help("Supported commands: " :: parser.help.lines.map("  " + _))
     )
 }
